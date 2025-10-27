@@ -86,12 +86,20 @@ install_nodejs() {
             # Install Node.js 20.x (LTS)
             $SUDO apt-get update
             $SUDO apt-get install -y curl
-            curl -fsSL https://deb.nodesource.com/setup_20.x | $SUDO -E bash -
+            if [ -z "$SUDO" ]; then
+                curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+            else
+                curl -fsSL https://deb.nodesource.com/setup_20.x | $SUDO -E bash -
+            fi
             $SUDO apt-get install -y nodejs
             ;;
         fedora|rhel|centos|rocky|almalinux)
             $SUDO dnf install -y curl
-            curl -fsSL https://rpm.nodesource.com/setup_20.x | $SUDO bash -
+            if [ -z "$SUDO" ]; then
+                curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
+            else
+                curl -fsSL https://rpm.nodesource.com/setup_20.x | $SUDO bash -
+            fi
             $SUDO dnf install -y nodejs
             ;;
         arch|manjaro)
