@@ -21,7 +21,11 @@ This API allows you to automate social media posts (Instagram, etc.) by leveragi
 ├── controllers/                    # Business logic
 ├── routes/                         # API endpoints
 ├── middleware/                     # Error handling
-└── lib/                           # Core services
+├── lib/                           # Core services
+├── setup-linux.sh                  # Initial setup script
+├── update-server.sh                # Update & restart script
+├── fix-browser-display.sh          # Fix browser display issues
+└── config-browser.sh               # Configure browser paths
 ```
 
 ## 🚀 Setup (Linux VM)
@@ -75,21 +79,23 @@ Once connected via RDP:
 # Start the server
 npm run dev:watch
 
-# In another terminal, configure browser paths
+# In another terminal, configure browser paths (only needed once)
 ./config-browser.sh
 ```
 
 The API is now ready at `http://localhost:3000`
 
+**Note:** Browser configuration is automatically saved to `browser-config.json` and persists across restarts. You only need to run `config-browser.sh` once!
+
 ## 📡 API Endpoints
 
 ### Browser Configuration
-Configure which browser session to use (run once after server start):
+Configure which browser session to use (saved persistently):
 
 ```bash
-POST /api/browser/config
-GET  /api/browser/config
-DELETE /api/browser/config
+POST /api/browser/config     # Set config (saved to file)
+GET  /api/browser/config     # Get current config
+DELETE /api/browser/config   # Clear config (deletes file)
 ```
 
 ### Instagram Posting
@@ -130,6 +136,7 @@ curl -X POST http://YOUR_VM_IP:3000/api/instagram/post \
 - ✅ RESTful API with TypeScript
 - ✅ File upload or server-side file path support
 - ✅ Automated setup script for Linux
+- ✅ Persistent browser configuration (survives restarts)
 - ✅ CORS enabled for remote access
 - ✅ Automatic file cleanup
 
@@ -233,6 +240,16 @@ sudo ufw status
 curl -X POST http://localhost:3000/api/browser/config -H "Content-Type: application/json" -d '{"executablePath":"/usr/bin/brave-browser","userDataDir":"/home/YOUR_USER/.config/BraveSoftware/Brave-Browser"}'
 ```
 
+### Browser fails to launch (ERROR: Failed to launch browser)
+```bash
+# Install virtual display support
+./fix-browser-display.sh
+
+# Or manually install Xvfb
+sudo apt-get install -y xvfb
+xvfb-run --auto-servernum npm start
+```
+
 ### Instagram session expired
 - Connect via RDP
 - Open Brave browser
@@ -244,7 +261,36 @@ curl -X POST http://localhost:3000/api/browser/config -H "Content-Type: applicat
 lsof -ti:3000 | xargs kill -9
 ```
 
-## 🔧 Development
+## 🔧 Server Management
+
+### Update Server
+
+To update the server with latest code:
+
+```bash
+chmod +x update-server.sh
+./update-server.sh
+```
+
+This script will:
+- Stop the running server
+- Pull latest code (if using git)
+- Install dependencies
+- Rebuild the project
+- Restart the server
+
+### Fix Browser Display Issues
+
+If you get "Failed to launch browser" errors:
+
+```bash
+chmod +x fix-browser-display.sh
+./fix-browser-display.sh
+```
+
+This installs Xvfb (virtual display) so the browser can run without GUI/RDP.
+
+### Development
 
 ```bash
 # Development with auto-reload

@@ -34,3 +34,6 @@ uploads/*
 
 # UserData (browser profiles)
 userData/
+
+# Browser configuration (persisted)
+browser-config.json
