@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Instagram Poster API - Test Client</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+    
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+    }
+    
+    .section {
+      margin-bottom: 40px;
+      padding-bottom: 40px;
+      border-bottom: 2px solid #f0f0f0;
+    }
+    
+    .section:last-child {
+      border-bottom: none;
+    }
+    
+    h2 {
+      color: #667eea;
+      margin-bottom: 20px;
+      font-size: 20px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #333;
+      font-weight: 500;
+    }
+    
+    input, textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-bottom: 15px;
+      font-family: inherit;
+      transition: border-color 0.3s;
+    }
+    
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+    
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+    }
+    
+    button:active {
+      transform: translateY(0);
+    }
+    
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .response {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 8px;
+      display: none;
+      white-space: pre-wrap;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+    }
+    
+    .response.success {
+      background: #d4edda;
+      border: 2px solid #c3e6cb;
+      color: #155724;
+      display: block;
+    }
+    
+    .response.error {
+      background: #f8d7da;
+      border: 2px solid #f5c6cb;
+      color: #721c24;
+      display: block;
+    }
+    
+    .file-input-wrapper {
+      position: relative;
+      overflow: hidden;
+      display: inline-block;
+      width: 100%;
+    }
+    
+    .file-input-wrapper input[type=file] {
+      position: absolute;
+      left: -9999px;
+    }
+    
+    .file-input-label {
+      display: block;
+      padding: 12px;
+      background: #f8f9fa;
+      border: 2px dashed #667eea;
+      border-radius: 8px;
+      text-align: center;
+      cursor: pointer;
+      transition: background 0.3s;
+      margin-bottom: 15px;
+    }
+    
+    .file-input-label:hover {
+      background: #e9ecef;
+    }
+    
+    .file-name {
+      margin-top: 10px;
+      color: #667eea;
+      font-weight: 600;
+    }
+    
+    .info-box {
+      background: #e7f3ff;
+      border-left: 4px solid #667eea;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 4px;
+    }
+    
+    .info-box p {
+      margin: 5px 0;
+      color: #333;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🦁 Instagram Poster API</h1>
+    <p class="subtitle">Test Client Interface</p>
+    
+    <!-- Browser Configuration Section -->
+    <div class="section">
+      <h2>1. Configure Browser</h2>
+      <div class="info-box">
+        <p><strong>Windows Default Paths:</strong></p>
+        <p>📁 Executable: <code>C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe</code></p>
+        <p>👤 User Data: <code>C:\Users\YourUsername\AppData\Local\BraveSoftware\Brave-Browser\User Data</code></p>
+      </div>
+      
+      <label for="executablePath">Browser Executable Path:</label>
+      <input type="text" id="executablePath" 
+             value="C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe"
+             placeholder="Path to brave.exe">
+      
+      <label for="userDataDir">User Data Directory:</label>
+      <input type="text" id="userDataDir" 
+             value="C:\Users\nokol\AppData\Local\BraveSoftware\Brave-Browser\User Data"
+             placeholder="Path to User Data folder">
+      
+      <button onclick="setConfig()">Set Configuration</button>
+      <div id="configResponse" class="response"></div>
+    </div>
+    
+    <!-- Post to Instagram Section -->
+    <div class="section">
+      <h2>2. Post to Instagram</h2>
+      
+      <div class="file-input-wrapper">
+        <input type="file" id="imageFile" accept="image/*" onchange="updateFileName()">
+        <label for="imageFile" class="file-input-label">
+          📸 Click to select image (JPEG, PNG, WEBP)
+        </label>
+      </div>
+      <div id="fileName" class="file-name"></div>
+      
+      <label for="caption">Caption:</label>
+      <textarea id="caption" placeholder="Enter your Instagram caption here... You can use emojis! 🎉"></textarea>
+      
+      <button onclick="postToInstagram()">Post to Instagram</button>
+      <div id="postResponse" class="response"></div>
+    </div>
+    
+    <!-- Get Configuration Section -->
+    <div class="section">
+      <h2>3. View Current Configuration</h2>
+      <button onclick="getConfig()">Get Configuration</button>
+      <div id="getConfigResponse" class="response"></div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE_URL = 'http://localhost:3000/api';
+
+    function updateFileName() {
+      const fileInput = document.getElementById('imageFile');
+      const fileNameDiv = document.getElementById('fileName');
+      
+      if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+        fileNameDiv.textContent = `Selected: ${file.name} (${sizeMB} MB)`;
+      } else {
+        fileNameDiv.textContent = '';
+      }
+    }
+
+    async function setConfig() {
+      const responseDiv = document.getElementById('configResponse');
+      responseDiv.className = 'response';
+      responseDiv.textContent = 'Setting configuration...';
+      
+      try {
+        const executablePath = document.getElementById('executablePath').value;
+        const userDataDir = document.getElementById('userDataDir').value;
+        
+        const response = await fetch(`${API_BASE_URL}/browser/config`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            executablePath,
+            userDataDir
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          responseDiv.className = 'response success';
+          responseDiv.textContent = '✅ ' + JSON.stringify(data, null, 2);
+        } else {
+          responseDiv.className = 'response error';
+          responseDiv.textContent = '❌ ' + JSON.stringify(data, null, 2);
+        }
+      } catch (error) {
+        responseDiv.className = 'response error';
+        responseDiv.textContent = '❌ Error: ' + error.message;
+      }
+    }
+
+    async function getConfig() {
+      const responseDiv = document.getElementById('getConfigResponse');
+      responseDiv.className = 'response';
+      responseDiv.textContent = 'Fetching configuration...';
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/browser/config`);
+        const data = await response.json();
+        
+        if (data.success) {
+          responseDiv.className = 'response success';
+          responseDiv.textContent = '✅ ' + JSON.stringify(data, null, 2);
+        } else {
+          responseDiv.className = 'response error';
+          responseDiv.textContent = '❌ ' + JSON.stringify(data, null, 2);
+        }
+      } catch (error) {
+        responseDiv.className = 'response error';
+        responseDiv.textContent = '❌ Error: ' + error.message;
+      }
+    }
+
+    async function postToInstagram() {
+      const responseDiv = document.getElementById('postResponse');
+      const fileInput = document.getElementById('imageFile');
+      const caption = document.getElementById('caption').value;
+      
+      if (!fileInput.files.length) {
+        responseDiv.className = 'response error';
+        responseDiv.textContent = '❌ Please select an image file';
+        return;
+      }
+      
+      if (!caption) {
+        responseDiv.className = 'response error';
+        responseDiv.textContent = '❌ Please enter a caption';
+        return;
+      }
+      
+      responseDiv.className = 'response';
+      responseDiv.textContent = 'Posting to Instagram... This may take a minute...';
+      
+      try {
+        const formData = new FormData();
+        formData.append('image', fileInput.files[0]);
+        formData.append('caption', caption);
+        
+        const response = await fetch(`${API_BASE_URL}/instagram/post`, {
+          method: 'POST',
+          body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          responseDiv.className = 'response success';
+          responseDiv.textContent = '✅ ' + JSON.stringify(data, null, 2);
+        } else {
+          responseDiv.className = 'response error';
+          responseDiv.textContent = '❌ ' + JSON.stringify(data, null, 2);
+        }
+      } catch (error) {
+        responseDiv.className = 'response error';
+        responseDiv.textContent = '❌ Error: ' + error.message;
+      }
+    }
+  </script>
+</body>
+</html>
+
