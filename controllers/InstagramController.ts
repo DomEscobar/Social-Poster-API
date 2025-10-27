@@ -42,7 +42,7 @@ export class InstagramController {
         useBrave: config.useBrave,
         executablePath: config.executablePath,
         braveUserDataDir: config.userDataDir,
-        headless: false,
+        headless: true,
       });
 
       await poster.post({
@@ -120,7 +120,7 @@ export class InstagramController {
         useBrave: config.useBrave,
         executablePath: config.executablePath,
         braveUserDataDir: config.userDataDir,
-        headless: false,
+        headless: true,
       });
 
       await poster.post({
