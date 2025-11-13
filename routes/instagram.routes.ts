@@ -38,5 +38,7 @@ router.post('/post', upload.single('image'), (req, res) => instagramController.p
 
 router.post('/post-with-path', (req, res) => instagramController.postWithUrl(req, res));
 
+router.post('/post-with-url', (req, res) => instagramController.postWithExternalUrl(req, res));
+
 export default router;
 

@@ -2,8 +2,50 @@ import { Request, Response } from 'express';
 import { configManager } from '../config';
 import { InstagramPoster } from '../lib/InstagramPoster';
 import * as fs from 'fs';
+import * as path from 'path';
+import * as https from 'https';
+import * as http from 'http';
 
 export class InstagramController {
+  
+  private async downloadImageFromUrl(imageUrl: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const protocol = imageUrl.startsWith('https') ? https : http;
+      
+      protocol.get(imageUrl, (response) => {
+        if (response.statusCode !== 200) {
+          reject(new Error(`Failed to download image: HTTP ${response.statusCode}`));
+          return;
+        }
+
+        const contentType = response.headers['content-type'];
+        if (!contentType || !contentType.startsWith('image/')) {
+          reject(new Error(`URL does not point to an image: ${contentType}`));
+          return;
+        }
+
+        const ext = contentType.split('/')[1]?.split(';')[0] || 'jpg';
+        const tempFileName = `temp-${Date.now()}-${Math.round(Math.random() * 1E9)}.${ext}`;
+        const tempFilePath = path.join('uploads', tempFileName);
+
+        const fileStream = fs.createWriteStream(tempFilePath);
+        
+        response.pipe(fileStream);
+
+        fileStream.on('finish', () => {
+          fileStream.close();
+          resolve(tempFilePath);
+        });
+
+        fileStream.on('error', (err) => {
+          fs.unlink(tempFilePath, () => {});
+          reject(err);
+        });
+      }).on('error', (err) => {
+        reject(err);
+      });
+    });
+  }
   
   public async post(req: Request, res: Response): Promise<void> {
     try {
@@ -142,6 +184,89 @@ export class InstagramController {
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to post to Instagram',
+      });
+    }
+  }
+
+  public async postWithExternalUrl(req: Request, res: Response): Promise<void> {
+    let tempFilePath: string | null = null;
+
+    try {
+      const { caption, imageUrl } = req.body;
+
+      if (!caption) {
+        res.status(400).json({
+          success: false,
+          error: 'Caption is required',
+        });
+        return;
+      }
+
+      if (!imageUrl) {
+        res.status(400).json({
+          success: false,
+          error: 'Image URL is required',
+        });
+        return;
+      }
+
+      if (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
+        res.status(400).json({
+          success: false,
+          error: 'Invalid image URL. Must start with http:// or https://',
+        });
+        return;
+      }
+
+      const config = configManager.getConfig();
+
+      if (!config) {
+        res.status(400).json({
+          success: false,
+          error: 'Browser configuration not set. Please set browser config first using /api/browser/config endpoint',
+        });
+        return;
+      }
+
+      tempFilePath = await this.downloadImageFromUrl(imageUrl);
+
+      const poster = new InstagramPoster({
+        useBrave: config.useBrave,
+        executablePath: config.executablePath,
+        braveUserDataDir: config.userDataDir,
+        headless: true,
+      });
+
+      await poster.post({
+        username: '',
+        password: '',
+        imagePath: tempFilePath,
+        caption: caption,
+      });
+
+      const fileStats = fs.statSync(tempFilePath);
+
+      if (fs.existsSync(tempFilePath)) {
+        fs.unlinkSync(tempFilePath);
+      }
+
+      res.json({
+        success: true,
+        message: 'Posted to Instagram successfully from external URL',
+        data: {
+          caption: caption.substring(0, 100) + (caption.length > 100 ? '...' : ''),
+          imageUrl: imageUrl,
+          imageSize: fileStats.size,
+        },
+      });
+    } catch (error) {
+      if (tempFilePath && fs.existsSync(tempFilePath)) {
+        fs.unlinkSync(tempFilePath);
+      }
+
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to post to Instagram from external URL',
       });
     }
   }
