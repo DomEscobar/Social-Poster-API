@@ -108,6 +108,7 @@ export class InstagramAPIServer {
       console.log(`  DELETE /api/browser/config     - Clear browser configuration`);
       console.log(`  POST   /api/instagram/post     - Post to Instagram (with file upload)`);
       console.log(`  POST   /api/instagram/post-with-path - Post to Instagram (with file path)`);
+      console.log(`  POST   /api/instagram/post-with-url - Post to Instagram (with image URL)`);
       console.log('');
     });
   }
