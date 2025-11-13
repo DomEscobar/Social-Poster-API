@@ -23,6 +23,7 @@
   "license": "ISC",
   "dependencies": {
     "express": "^4.18.2",
+    "dotenv": "^17.2.3",
     "cors": "^2.8.5",
     "multer": "^2.0.0-rc.4",
     "puppeteer": "^21.5.2",
