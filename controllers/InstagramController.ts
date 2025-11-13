@@ -8,6 +8,12 @@ import * as http from 'http';
 
 export class InstagramController {
   
+  private getFileExtensionFromUrl(url: string): string {
+    const urlPath = url.split('?')[0];
+    const match = urlPath.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+    return match ? match[1].toLowerCase() : 'jpg';
+  }
+
   private async downloadImageFromUrl(imageUrl: string): Promise<string> {
     return new Promise((resolve, reject) => {
       const protocol = imageUrl.startsWith('https') ? https : http;
@@ -19,12 +25,23 @@ export class InstagramController {
         }
 
         const contentType = response.headers['content-type'];
-        if (!contentType || !contentType.startsWith('image/')) {
-          reject(new Error(`URL does not point to an image: ${contentType}`));
+        const isImageContentType = contentType && contentType.startsWith('image/');
+        const isGenericContentType = contentType && (
+          contentType.includes('octet-stream') || 
+          contentType.includes('application/octet-stream') ||
+          contentType.includes('binary/octet-stream')
+        );
+
+        let ext = 'jpg';
+        if (isImageContentType) {
+          ext = contentType.split('/')[1]?.split(';')[0] || 'jpg';
+        } else if (isGenericContentType || !contentType) {
+          ext = this.getFileExtensionFromUrl(imageUrl);
+        } else {
+          reject(new Error(`URL does not point to an image. Content-Type: ${contentType}`));
           return;
         }
 
-        const ext = contentType.split('/')[1]?.split(';')[0] || 'jpg';
         const tempFileName = `temp-${Date.now()}-${Math.round(Math.random() * 1E9)}.${ext}`;
         const tempFilePath = path.join('uploads', tempFileName);
 
