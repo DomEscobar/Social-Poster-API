@@ -74,12 +74,9 @@ Once connected via RDP:
 3. Sign in with "Remember me" checked
 4. Close browser (session is saved)
 
-### Step 4: Configure & Start API
+### Step 4: Configure
 
 ```bash
-# Start the server
-npm run dev:watch
-
 # In another terminal, configure browser paths (only needed once)
 ./config-browser.sh
 ```
