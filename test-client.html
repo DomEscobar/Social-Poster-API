@@ -184,8 +184,8 @@
 </head>
 <body>
   <div class="container">
-    <h1>🦁 Instagram Poster API</h1>
-    <p class="subtitle">Test Client Interface</p>
+    <h1>🚀 Social Poster API</h1>
+    <p class="subtitle">Test Client Interface - Instagram & Twitter</p>
     
     <!-- Browser Configuration Section -->
     <div class="section">
@@ -198,12 +198,12 @@
       
       <label for="executablePath">Browser Executable Path:</label>
       <input type="text" id="executablePath" 
-             value="C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe"
+             value="C:\Users\dhuec\AppData\Local\BraveSoftware\Brave-Browser\Application\brave.exe"
              placeholder="Path to brave.exe">
       
       <label for="userDataDir">User Data Directory:</label>
       <input type="text" id="userDataDir" 
-             value="C:\Users\nokol\AppData\Local\BraveSoftware\Brave-Browser\User Data"
+             value="C:\Users\dhuec\AppData\Local\BraveSoftware\Brave-Browser\User Data"
              placeholder="Path to User Data folder">
       
       <button onclick="setConfig()">Set Configuration</button>
@@ -215,7 +215,7 @@
       <h2>2. Post to Instagram</h2>
       
       <div class="file-input-wrapper">
-        <input type="file" id="imageFile" accept="image/*" onchange="updateFileName()">
+        <input type="file" id="imageFile" accept="image/*" onchange="updateFileName('imageFile', 'fileName')">
         <label for="imageFile" class="file-input-label">
           📸 Click to select image (JPEG, PNG, WEBP)
         </label>
@@ -229,20 +229,44 @@
       <div id="postResponse" class="response"></div>
     </div>
     
+    <!-- Post to Twitter Section -->
+    <div class="section">
+      <h2>3. Post to Twitter</h2>
+      
+      <div class="file-input-wrapper">
+        <input type="file" id="twitterImageFile" accept="image/*" onchange="updateFileName('twitterImageFile', 'twitterFileName')">
+        <label for="twitterImageFile" class="file-input-label">
+          🖼️ Click to select image (Optional - JPEG, PNG, GIF, WEBP)
+        </label>
+      </div>
+      <div id="twitterFileName" class="file-name"></div>
+      
+      <p style="text-align: center; color: #666; margin: 10px 0;">— OR —</p>
+      
+      <label for="twitterImageUrl">Image URL (Optional):</label>
+      <input type="text" id="twitterImageUrl" placeholder="https://example.com/image.jpg">
+      
+      <label for="tweetText">Tweet Text: <span id="charCount" style="color: #667eea; float: right;">0/280</span></label>
+      <textarea id="tweetText" maxlength="280" placeholder="What's happening? 🐦" oninput="updateCharCount()"></textarea>
+      
+      <button onclick="postToTwitter()">Post to Twitter</button>
+      <div id="twitterPostResponse" class="response"></div>
+    </div>
+    
     <!-- Get Configuration Section -->
     <div class="section">
-      <h2>3. View Current Configuration</h2>
+      <h2>4. View Current Configuration</h2>
       <button onclick="getConfig()">Get Configuration</button>
       <div id="getConfigResponse" class="response"></div>
     </div>
   </div>
 
   <script>
-    const API_BASE_URL = 'http://localhost:3000/api';
+    const API_BASE_URL = 'http://localhost:5500/api';
 
-    function updateFileName() {
-      const fileInput = document.getElementById('imageFile');
-      const fileNameDiv = document.getElementById('fileName');
+    function updateFileName(inputId, displayId) {
+      const fileInput = document.getElementById(inputId);
+      const fileNameDiv = document.getElementById(displayId);
       
       if (fileInput.files.length > 0) {
         const file = fileInput.files[0];
@@ -250,6 +274,22 @@
         fileNameDiv.textContent = `Selected: ${file.name} (${sizeMB} MB)`;
       } else {
         fileNameDiv.textContent = '';
+      }
+    }
+
+    function updateCharCount() {
+      const tweetText = document.getElementById('tweetText').value;
+      const charCount = document.getElementById('charCount');
+      const length = tweetText.length;
+      
+      charCount.textContent = `${length}/280`;
+      
+      if (length > 280) {
+        charCount.style.color = '#dc3545';
+      } else if (length > 260) {
+        charCount.style.color = '#ffc107';
+      } else {
+        charCount.style.color = '#667eea';
       }
     }
 
@@ -345,6 +385,86 @@
         if (data.success) {
           responseDiv.className = 'response success';
           responseDiv.textContent = '✅ ' + JSON.stringify(data, null, 2);
+        } else {
+          responseDiv.className = 'response error';
+          responseDiv.textContent = '❌ ' + JSON.stringify(data, null, 2);
+        }
+      } catch (error) {
+        responseDiv.className = 'response error';
+        responseDiv.textContent = '❌ Error: ' + error.message;
+      }
+    }
+
+    async function postToTwitter() {
+      const responseDiv = document.getElementById('twitterPostResponse');
+      const fileInput = document.getElementById('twitterImageFile');
+      const imageUrlInput = document.getElementById('twitterImageUrl');
+      const tweetText = document.getElementById('tweetText').value;
+      
+      if (!tweetText) {
+        responseDiv.className = 'response error';
+        responseDiv.textContent = '❌ Please enter tweet text';
+        return;
+      }
+      
+      if (tweetText.length > 280) {
+        responseDiv.className = 'response error';
+        responseDiv.textContent = '❌ Tweet text must be 280 characters or less';
+        return;
+      }
+      
+      const hasFile = fileInput.files.length > 0;
+      const hasUrl = imageUrlInput.value.trim() !== '';
+      
+      if (hasFile && hasUrl) {
+        responseDiv.className = 'response error';
+        responseDiv.textContent = '❌ Please choose either file upload OR image URL, not both';
+        return;
+      }
+      
+      responseDiv.className = 'response';
+      responseDiv.textContent = 'Posting to Twitter... This may take a minute...';
+      
+      try {
+        let response;
+        
+        if (hasUrl) {
+          // Post with URL
+          response = await fetch(`${API_BASE_URL}/twitter/post-with-url`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              text: tweetText,
+              imageUrl: imageUrlInput.value.trim()
+            })
+          });
+        } else {
+          // Post with file upload
+          const formData = new FormData();
+          formData.append('text', tweetText);
+          
+          if (hasFile) {
+            formData.append('image', fileInput.files[0]);
+          }
+          
+          response = await fetch(`${API_BASE_URL}/twitter/post`, {
+            method: 'POST',
+            body: formData
+          });
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          responseDiv.className = 'response success';
+          responseDiv.textContent = '✅ ' + JSON.stringify(data, null, 2);
+          document.getElementById('tweetText').value = '';
+          document.getElementById('twitterImageFile').value = '';
+          document.getElementById('twitterImageUrl').value = '';
+          document.getElementById('twitterFileName').textContent = '';
+          updateCharCount();
         } else {
           responseDiv.className = 'response error';
           responseDiv.textContent = '❌ ' + JSON.stringify(data, null, 2);

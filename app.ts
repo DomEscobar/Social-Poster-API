@@ -2,6 +2,7 @@ import express, { Application } from 'express';
 import cors from 'cors';
 import browserRoutes from './routes/browser.routes';
 import instagramRoutes from './routes/instagram.routes';
+import twitterRoutes from './routes/twitter.routes';
 import { errorHandler } from './middleware/errorHandler';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -40,6 +41,10 @@ export class InstagramAPIServer {
             post: 'POST /api/instagram/post (multipart/form-data)',
             postWithPath: 'POST /api/instagram/post-with-path (application/json)',
           },
+          twitter: {
+            post: 'POST /api/twitter/post (multipart/form-data)',
+            postWithUrl: 'POST /api/twitter/post-with-url (application/json)',
+          },
         },
         documentation: {
           setConfig: {
@@ -74,6 +79,7 @@ export class InstagramAPIServer {
 
     this.app.use('/api/browser', browserRoutes);
     this.app.use('/api/instagram', instagramRoutes);
+    this.app.use('/api/twitter', twitterRoutes);
 
     this.app.use('*', (req, res) => {
       res.status(404).json({
@@ -109,6 +115,8 @@ export class InstagramAPIServer {
       console.log(`  POST   /api/instagram/post     - Post to Instagram (with file upload)`);
       console.log(`  POST   /api/instagram/post-with-path - Post to Instagram (with file path)`);
       console.log(`  POST   /api/instagram/post-with-url - Post to Instagram (with image URL)`);
+      console.log(`  POST   /api/twitter/post       - Post to Twitter (with optional image)`);
+      console.log(`  POST   /api/twitter/post-with-url - Post to Twitter (with image URL)`);
       console.log('');
     });
   }

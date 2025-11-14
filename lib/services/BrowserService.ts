@@ -1,7 +1,6 @@
 import puppeteer, { Browser, LaunchOptions } from 'puppeteer';
 import puppeteerExtra from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
-import AdblockerPlugin from 'puppeteer-extra-plugin-adblocker';
 import { Logger } from '../utils/Logger';
 
 export interface BrowserServiceConfig {
@@ -25,13 +24,13 @@ export class BrowserService {
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-accelerated-2d-canvas',
+      '--disable-blink-features=AutomationControlled',
+      '--disable-infobars',
       '--no-first-run',
-      '--no-zygote',
-      '--disable-gpu',
+      '--no-default-browser-check',
+      '--window-size=1920,1080',
     ],
-    timeout: 30000,
+    timeout: 60000,
   };
 
   constructor(private config: BrowserServiceConfig = {}) {
@@ -40,7 +39,6 @@ export class BrowserService {
 
   private setupPuppeteerExtra(): void {
     puppeteerExtra.use(StealthPlugin());
-    puppeteerExtra.use(AdblockerPlugin({ blockTrackers: true }));
   }
 
   public async launch(): Promise<Browser> {
@@ -61,6 +59,7 @@ export class BrowserService {
         timeout: finalConfig.timeout,
         userDataDir: finalConfig.userDataDir,
         executablePath: finalConfig.executablePath,
+        ignoreDefaultArgs: ['--enable-automation'],
       } as LaunchOptions;
 
       this.browser = await puppeteerExtra.launch(launchOptions);
@@ -70,7 +69,18 @@ export class BrowserService {
       
     } catch (error) {
       this.logger.error('Failed to launch browser:', error);
-      throw new Error(`Browser launch failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
+      if (error instanceof Error) {
+        if (error.message.includes('TimeoutError') || error.name === 'TimeoutError') {
+          throw new Error(`Browser launch timed out after ${finalConfig.timeout}ms. Make sure no other browser instance is using the same profile directory: ${finalConfig.userDataDir}`);
+        }
+        if (error.message.includes('ENOENT') || error.message.includes('not found')) {
+          throw new Error(`Browser executable not found at: ${finalConfig.executablePath || 'default path'}. Please check the executable path.`);
+        }
+        throw new Error(`Browser launch failed: ${error.message}`);
+      }
+      
+      throw new Error(`Browser launch failed: Unknown error`);
     }
   }
 

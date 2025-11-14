@@ -69,7 +69,10 @@ export class InstagramPoster {
     const page = await browser.newPage();
 
     try {
-      await page.setViewport({ width: 1920, height: 1080 });
+      await page.setViewport({
+        width: 1920,
+        height: 1080,
+      });
 
       this.logger.info('Navigating to Instagram...');
       await page.goto('https://www.instagram.com/', { waitUntil: 'networkidle2' });
@@ -92,11 +95,57 @@ export class InstagramPoster {
 
       this.logger.info('Post created successfully!');
 
+      await this.performPostPostActions(page);
+
     } catch (error) {
       this.logger.error('Error posting to Instagram:', error);
       throw error;
     } finally {
       await this.browserService.close();
+    }
+  }
+
+  private async performPostPostActions(page: Page): Promise<void> {
+    this.logger.info('Performing post-posting actions to appear natural...');
+
+    try {
+      await this.randomDelay(3000, 5000);
+
+      this.logger.info('Navigating to home feed...');
+      const homeButton = await page.$('a[href="/"]');
+      if (homeButton) {
+        await homeButton.click();
+        await this.randomDelay(2000, 3000);
+      }
+
+      this.logger.info('Scrolling feed...');
+      await page.evaluate('window.scrollBy(0, 400)');
+      await this.randomDelay(1500, 2500);
+
+      await page.evaluate('window.scrollBy(0, 500)');
+      await this.randomDelay(1000, 2000);
+
+      await page.evaluate('window.scrollBy(0, -150)');
+      await this.randomDelay(1500, 2500);
+
+      this.logger.info('Checking profile...');
+      const profileButton = await page.$('a[href*="/"]');
+      if (profileButton) {
+        const href = await page.evaluate(el => el.getAttribute('href'), profileButton);
+        if (href && href !== '/' && !href.includes('explore')) {
+          await this.randomDelay(2000, 3000);
+        }
+      }
+
+      this.logger.info('Scrolling feed more...');
+      await page.evaluate('window.scrollBy(0, 600)');
+      await this.randomDelay(2000, 3000);
+
+      this.logger.info('Waiting before closing browser...');
+      await this.randomDelay(4000, 6000);
+
+    } catch (error) {
+      this.logger.warn('Some post-actions failed, but continuing:', error);
     }
   }
 
