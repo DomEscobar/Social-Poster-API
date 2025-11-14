@@ -115,6 +115,92 @@ export class TwitterPoster {
     return str.startsWith('http://') || str.startsWith('https://');
   }
 
+  private splitTextIntoTweets(text: string, maxLength: number = 270): string[] {
+    if (text.length <= maxLength) {
+      return [text];
+    }
+
+    if (text.includes('---')) {
+      this.logger.info('Detected manual thread split markers (---), using them for splitting');
+      const manualTweets = text.split('---').map(t => t.trim()).filter(t => t.length > 0);
+      
+      if (manualTweets.length === 0) {
+        return [text];
+      }
+
+      const validatedTweets: string[] = [];
+      for (let i = 0; i < manualTweets.length; i++) {
+        const tweet = manualTweets[i];
+        
+        if (tweet.length > maxLength) {
+          this.logger.warn(`Tweet ${i + 1} from manual split exceeds ${maxLength} chars (${tweet.length}), auto-splitting it`);
+          const autoSplit = this.autoSplitText(tweet, maxLength);
+          validatedTweets.push(...autoSplit);
+        } else {
+          validatedTweets.push(tweet);
+        }
+      }
+
+      const totalTweets = validatedTweets.length;
+      return validatedTweets.map((tweet, index) => {
+        if (totalTweets > 1) {
+          return `${tweet}\n\n(${index + 1}/${totalTweets})`;
+        }
+        return tweet;
+      });
+    }
+
+    return this.autoSplitText(text, maxLength);
+  }
+
+  private autoSplitText(text: string, maxLength: number = 270): string[] {
+    const tweets: string[] = [];
+    const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+    let currentTweet = '';
+
+    for (const sentence of sentences) {
+      const trimmedSentence = sentence.trim();
+
+      if (trimmedSentence.length > maxLength) {
+        if (currentTweet) {
+          tweets.push(currentTweet.trim());
+          currentTweet = '';
+        }
+
+        const words = trimmedSentence.split(' ');
+        for (const word of words) {
+          if ((currentTweet + ' ' + word).trim().length > maxLength) {
+            if (currentTweet) {
+              tweets.push(currentTweet.trim());
+            }
+            currentTweet = word;
+          } else {
+            currentTweet = (currentTweet + ' ' + word).trim();
+          }
+        }
+      } else {
+        if ((currentTweet + ' ' + trimmedSentence).trim().length > maxLength) {
+          tweets.push(currentTweet.trim());
+          currentTweet = trimmedSentence;
+        } else {
+          currentTweet = (currentTweet + ' ' + trimmedSentence).trim();
+        }
+      }
+    }
+
+    if (currentTweet) {
+      tweets.push(currentTweet.trim());
+    }
+
+    const totalTweets = tweets.length;
+    return tweets.map((tweet, index) => {
+      if (totalTweets > 1) {
+        return `${tweet}\n\n(${index + 1}/${totalTweets})`;
+      }
+      return tweet;
+    });
+  }
+
   private async typeWithDelay(page: Page, selector: string, text: string): Promise<void> {
     await page.waitForSelector(selector, { visible: true });
     await page.click(selector);
@@ -123,6 +209,13 @@ export class TwitterPoster {
     for (const char of text) {
       await page.type(selector, char);
       await this.delay(50 + Math.random() * 150);
+    }
+  }
+
+  private async typeTextFast(page: Page, text: string): Promise<void> {
+    for (const char of text) {
+      await page.keyboard.type(char);
+      await this.delay(3 + Math.random() * 10);
     }
   }
 
@@ -161,7 +254,14 @@ export class TwitterPoster {
         this.logger.info('Image downloaded to:', downloadedImagePath);
       }
 
-      await this.createPost(page, config.text, imagePathToUse);
+      if (config.text.length > 280) {
+        this.logger.info(`Text is ${config.text.length} characters, automatically creating thread...`);
+        const tweets = this.splitTextIntoTweets(config.text);
+        this.logger.info(`Split into ${tweets.length} tweets`);
+        await this.createThread(page, tweets, imagePathToUse);
+      } else {
+        await this.createPost(page, config.text, imagePathToUse);
+      }
 
       this.logger.info('Tweet posted successfully!');
 
@@ -272,6 +372,92 @@ export class TwitterPoster {
     }
   }
 
+  private async createThread(page: Page, tweets: string[], imagePath?: string): Promise<void> {
+    this.logger.info(`Creating thread with ${tweets.length} tweets using compose thread...`);
+
+    try {
+      await page.goto('https://twitter.com/home', { waitUntil: 'networkidle2' });
+      await this.randomDelay(500, 1000);
+
+      for (let i = 0; i < tweets.length; i++) {
+        this.logger.info(`Composing tweet ${i + 1}/${tweets.length}`);
+
+        const tweetBox = await page.waitForSelector('div[data-testid="tweetTextarea_0"]', {
+          visible: true,
+          timeout: 10000
+        });
+
+        if (!tweetBox) {
+          throw new Error('Could not find tweet compose box');
+        }
+
+        //only click the first 
+        if (i === 0) {
+          await tweetBox.click();
+        } else {
+          await this.randomDelay(1000, 2000);
+        }
+
+        await this.delay(300);
+
+        this.logger.info(`Typing text for tweet ${i + 1}... (${tweets[i].length} chars)`);
+        await this.typeTextFast(page, tweets[i]);
+
+        await this.randomDelay(300, 600);
+
+        if (i === 0 && imagePath && fs.existsSync(imagePath)) {
+          this.logger.info('Uploading image to first tweet...');
+          const fileInput = await page.$('input[data-testid="fileInput"]');
+          if (fileInput) {
+            await fileInput.uploadFile(path.resolve(imagePath));
+            await this.randomDelay(1500, 2500);
+            this.logger.info('Image uploaded successfully');
+          }
+        }
+
+        await this.randomDelay(1000, 2000);
+
+        if (i < tweets.length - 1) {
+          this.logger.info('Clicking Add post button...');
+          
+          let addButton = await page.$('a[aria-label="Add post"]');
+          if (!addButton) {
+            addButton = await page.$('button[aria-label="Add post"]');
+          }
+
+          if (addButton) {
+            await addButton.click();
+            await this.randomDelay(800, 1200);
+          } else {
+            throw new Error('Could not find Add post button (tried both <a> and <button>)');
+          }
+        }
+      }
+
+      this.logger.info('All tweets composed, posting thread...');
+      await this.randomDelay(1000, 2000);
+
+      const postButton = await page.waitForSelector('button[data-testid="tweetButton"]', {
+        visible: true,
+        timeout: 5000
+      });
+
+      if (!postButton) {
+        throw new Error('Could not find Post all button');
+      }
+
+      this.logger.info('Clicking Post all button...');
+      await postButton.click();
+      await this.delay(3000);
+
+      this.logger.info('Thread posted successfully!');
+    } catch (error) {
+      this.logger.error('Error creating thread:', error);
+      throw error;
+    }
+  }
+
+
   private async createPost(page: Page, text: string, imagePath?: string): Promise<void> {
     this.logger.info('Creating new tweet...');
 
@@ -323,7 +509,7 @@ export class TwitterPoster {
         timeout: 5000
       });
 
-      
+
       if (!postButton) {
         throw new Error('Could not find Post button');
       }

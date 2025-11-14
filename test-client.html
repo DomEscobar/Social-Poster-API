@@ -246,8 +246,12 @@
       <label for="twitterImageUrl">Image URL (Optional):</label>
       <input type="text" id="twitterImageUrl" placeholder="https://example.com/image.jpg">
       
-      <label for="tweetText">Tweet Text: <span id="charCount" style="color: #667eea; float: right;">0/280</span></label>
-      <textarea id="tweetText" maxlength="280" placeholder="What's happening? 🐦" oninput="updateCharCount()"></textarea>
+      <label for="tweetText">Tweet Text: <span id="charCount" style="color: #667eea; float: right;">0/∞</span></label>
+      <textarea id="tweetText" placeholder="What's happening? 🐦 (Auto-threads if >280 chars)" oninput="updateCharCount()"></textarea>
+      
+      <p style="color: #666; font-size: 13px; margin-top: -10px; margin-bottom: 15px;">
+        💡 Tip: Text longer than 280 characters will automatically be split into a thread
+      </p>
       
       <button onclick="postToTwitter()">Post to Twitter</button>
       <div id="twitterPostResponse" class="response"></div>
@@ -282,13 +286,15 @@
       const charCount = document.getElementById('charCount');
       const length = tweetText.length;
       
-      charCount.textContent = `${length}/280`;
-      
       if (length > 280) {
-        charCount.style.color = '#dc3545';
+        const estimatedTweets = Math.ceil(length / 270);
+        charCount.textContent = `${length} chars (~${estimatedTweets} tweets)`;
+        charCount.style.color = '#667eea';
       } else if (length > 260) {
+        charCount.textContent = `${length}/280`;
         charCount.style.color = '#ffc107';
       } else {
+        charCount.textContent = `${length}/280`;
         charCount.style.color = '#667eea';
       }
     }
@@ -407,12 +413,6 @@
         return;
       }
       
-      if (tweetText.length > 280) {
-        responseDiv.className = 'response error';
-        responseDiv.textContent = '❌ Tweet text must be 280 characters or less';
-        return;
-      }
-      
       const hasFile = fileInput.files.length > 0;
       const hasUrl = imageUrlInput.value.trim() !== '';
       
@@ -423,13 +423,13 @@
       }
       
       responseDiv.className = 'response';
-      responseDiv.textContent = 'Posting to Twitter... This may take a minute...';
+      const threadInfo = tweetText.length > 280 ? ' (creating thread...)' : '';
+      responseDiv.textContent = `Posting to Twitter${threadInfo}... This may take a minute...`;
       
       try {
         let response;
         
         if (hasUrl) {
-          // Post with URL
           response = await fetch(`${API_BASE_URL}/twitter/post-with-url`, {
             method: 'POST',
             headers: {
@@ -441,7 +441,6 @@
             })
           });
         } else {
-          // Post with file upload
           const formData = new FormData();
           formData.append('text', tweetText);
           

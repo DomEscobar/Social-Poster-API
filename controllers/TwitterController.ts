@@ -18,14 +18,6 @@ export class TwitterController {
         return;
       }
 
-      if (text.length > 280) {
-        res.status(400).json({
-          success: false,
-          error: 'Tweet text must be 280 characters or less',
-        });
-        return;
-      }
-
       const config = configManager.getConfig();
 
       if (!config) {
@@ -85,14 +77,6 @@ export class TwitterController {
         res.status(400).json({
           success: false,
           error: 'Tweet text is required',
-        });
-        return;
-      }
-
-      if (text.length > 280) {
-        res.status(400).json({
-          success: false,
-          error: 'Tweet text must be 280 characters or less',
         });
         return;
       }
